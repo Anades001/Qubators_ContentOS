@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ContentOS – Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B1E;
+    --cream:#FAF7F2;
+    --rose:#E8B4B8;
+    --rose-dark:#C98A8E;
+    --gold:#C9A96A;
+    --plum:#5B21B6;
+    --plum-soft:#EDE9FE;
+    --stone:#8A8580;
+    --card:#FFFFFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  header{padding:40px 32px 8px;max-width:960px;margin:0 auto}
+  header .eyebrow{letter-spacing:.18em;font-size:12px;font-weight:600;color:var(--plum);text-transform:uppercase}
+  h1{font-family:"Playfair Display",serif;font-size:44px;line-height:1.05;margin:12px 0 8px}
+  p.lead{color:#4c4744;font-size:17px;max-width:640px}
+  main{max-width:960px;margin:0 auto;padding:24px 32px 64px;display:grid;gap:24px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid #eee5da;border-radius:var(--radius);padding:20px;box-shadow:0 8px 24px rgba(30,27,30,.06)}
+  .card h2{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--stone);margin:0 0 14px}
+  .swatch{display:flex;align-items:center;gap:12px;margin:10px 0}
+  .dot{width:44px;height:44px;border-radius:12px;border:1px solid rgba(0,0,0,.08);flex:none}
+  .swatch b{display:block;font-size:14px}
+  .swatch span{font-size:12px;color:var(--stone)}
+  .type-sample h3{font-family:"Playfair Display",serif;font-size:30px;margin:0 0 6px}
+  .type-sample p{margin:4px 0;color:#4c4744}
+  .btn{appearance:none;border:0;border-radius:999px;padding:13px 22px;font-weight:600;font-size:15px;cursor:pointer;transition:transform .06s ease, box-shadow .2s}
+  .btn-primary{background:var(--ink);color:#fff;box-shadow:0 10px 20px rgba(30,27,30,.18)}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-accent{background:var(--plum);color:#fff}
+  .btn-ghost{background:#fff;border:1px solid #e5dccf;color:var(--ink)}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap}
+  label{font-size:13px;font-weight:600;display:block;margin:0 0 8px}
+  input[type=text]{width:100%;padding:13px 15px;border-radius:12px;border:1.5px solid #e5dccf;background:#fff;font-size:15px;outline:none}
+  input[type=text]:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-soft)}
+  .hint{font-size:12px;color:var(--stone);margin-top:8px}
+  .pipeline{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;background:var(--plum-soft);border:1px solid #ddd0ff}
+  footer{max-width:960px;margin:0 auto;padding:0 32px 48px;color:var(--stone);font-size:13px}
+  code{background:#1E1B1E;color:#FAF7F2;padding:2px 8px;border-radius:8px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">ContentOS · Design Preview · <code>design.html</code></div>
+  <h1>From scattered ideas to an organized content engine.</h1>
+  <p class="lead">Soft luxury, minimal, warm. Playfair Display for brand moments, Inter for product UI. This file is the visual contract for MVP: colors, type, buttons, inputs.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>1 · Colors</h2>
+    <div class="grid">
+      <div>
+        <div class="swatch"><div class="dot" style="background:#1E1B1E"></div><div><b>Ink #1E1B1E</b><span>Primary text / primary button</span></div></div>
+        <div class="swatch"><div class="dot" style="background:#FAF7F2"></div><div><b>Cream #FAF7F2</b><span>App background</span></div></div>
+        <div class="swatch"><div class="dot" style="background:#FFFFFF"></div><div><b>Card #FFFFFF</b><span>Surfaces</span></div></div>
+      </div>
+      <div>
+        <div class="swatch"><div class="dot" style="background:#5B21B6"></div><div><b>Plum #5B21B6</b><span>Accent / links / AI actions</span></div></div>
+        <div class="swatch"><div class="dot" style="background:#EDE9FE"></div><div><b>Plum Soft #EDE9FE</b><span>Focus rings / pills</span></div></div>
+        <div class="swatch"><div class="dot" style="background:#C9A96A"></div><div><b>Gold #C9A96A</b><span>Luxury highlight / premium</span></div></div>
+      </div>
+      <div>
+        <div class="swatch"><div class="dot" style="background:#E8B4B8"></div><div><b>Rose #E8B4B8</b><span>Brand warmth / Ombra Fiore</span></div></div>
+        <div class="swatch"><div class="dot" style="background:#8A8580"></div><div><b>Stone #8A8580</b><span>Secondary text</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card type-sample">
+    <h2>2 · Typography</h2>
+    <h3>Launch your handbag in 10 days.</h3>
+    <p><b>Headings:</b> Playfair Display 600/700 – brand, campaign titles, landing.</p>
+    <p><b>Body/UI:</b> Inter 400/500/600 – 15–17px body, 13px labels, 12px hints.</p>
+    <p>Example body: Educational carousel posts earned 2.3× more saves than promo statics last month.</p>
+  </section>
+
+  <section class="card">
+    <h2>3 · Buttons</h2>
+    <div class="btn-row">
+      <button class="btn btn-primary">Generate ideas</button>
+      <button class="btn btn-accent">Create brief →</button>
+      <button class="btn btn-ghost">Save draft</button>
+    </div>
+    <p class="hint">Primary = Ink (default action). Accent = Plum (AI generation). Ghost = secondary / cancel. Radius 999px, 13×22 padding, 600 weight.</p>
+    <h2 style="margin-top:20px">Pipeline statuses</h2>
+    <div class="pipeline">
+      <span class="pill">🟣 Idea</span><span class="pill">🟡 Draft</span><span class="pill">🔵 In Progress</span><span class="pill">🟠 Review</span><span class="pill">🟢 Approved</span><span class="pill">📅 Scheduled</span><span class="pill">✅ Published</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>4 · Sample Input</h2>
+    <label for="goal">Content goal</label>
+    <input id="goal" type="text" value="Promote my new crochet phone pouch" />
+    <p class="hint">Focused border = Plum + 4px Plum-Soft ring. Error state (not shown) = #B42318 border + message.</p>
+    <label for="brand" style="margin-top:16px">Brand voice</label>
+    <input id="brand" type="text" placeholder="Warm, artistic, feminine – soft luxury" />
+  </section>
+</main>
+<footer>ContentOS · Pre-MVP · See <code>README.md</code> + <code>Documents/ContentOS.md</code> + <code>PRD.md</code> (implementation plan).</footer>
+</body>
+</html>
