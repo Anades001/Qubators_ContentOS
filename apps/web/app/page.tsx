@@ -30,20 +30,20 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-[960px] px-4 py-10 sm:px-8">
       <header className="mb-8">
-        <p className="eyebrow">ContentOS · Phase 0</p>
+        <p className="eyebrow">ContentOS · Phase 1</p>
         <h1 className="mt-3 font-display text-4xl leading-tight sm:text-[44px]">
           From scattered ideas to an organized content engine.
         </h1>
         <p className="mt-3 max-w-xl text-[17px] text-[#4c4744]">
-          The scaffold is running. Next up: Brand DNA onboarding (Phase 1).
+          Teach ContentOS your brand once — every idea, caption and campaign builds on it.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/sign-in" className="btn-primary">
+          <Link href="/sign-up" className="btn-primary">
+            Get started
+          </Link>
+          <Link href="/sign-in" className="btn-ghost">
             Sign in
           </Link>
-          <a href="/api/health" className="btn-ghost">
-            API health
-          </a>
         </div>
       </header>
 

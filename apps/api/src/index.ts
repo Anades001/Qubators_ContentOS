@@ -1,4 +1,5 @@
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { OllamaClient, createMockLlm } from "@contentos/ai";
 import { getFeatureFlags } from "@contentos/config";
 import { prisma } from "@contentos/db";
 import { createStorage } from "@contentos/storage";
@@ -8,6 +9,8 @@ import { env } from "./env";
 
 const auth = createAuth(env, prisma);
 const storage = createStorage(env);
+
+const llm = env.AI_DRIVER === "mock" ? createMockLlm() : new OllamaClient(env.OLLAMA_HOST, env.AI_MODEL);
 
 const app = createApp({
   flags: getFeatureFlags(env),
@@ -21,6 +24,7 @@ const app = createApp({
   },
   userOwnsBrand: async (userId, brandId) =>
     (await prisma.brand.count({ where: { id: brandId, ownerId: userId } })) > 0,
+  brands: { db: prisma, llm },
   pingDb: async () => {
     await prisma.$queryRaw`SELECT 1`;
   },
@@ -28,7 +32,9 @@ const app = createApp({
 });
 
 const server = app.listen(env.API_PORT, () => {
-  console.log(`ContentOS API listening on :${env.API_PORT} (storage=${storage.driver})`);
+  console.log(
+    `ContentOS API listening on :${env.API_PORT} (storage=${storage.driver}, ai=${llm.driver}:${llm.model})`,
+  );
 });
 
 const shutdown = () => {

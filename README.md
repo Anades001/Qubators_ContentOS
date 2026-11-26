@@ -114,7 +114,7 @@ Not "AI captions" or "image gen" alone, but:
 
 ## Status
 
-**Phase 0 (scaffold) complete.** Next: Phase 1 – Auth + Brand DNA wizard (`PRD.md` §5).
+**Phase 1 (Auth + Brand DNA) complete.** Sign up → 4-step brand wizard → AI-drafted Brand DNA → edit → versioned saves with history and restore. Next: Phase 2 – Inbox + Idea → Brief (`PRD.md` §5).
 
 ## Getting started
 
@@ -129,7 +129,9 @@ pnpm db:seed                # Ombra Fiore demo workspace
 pnpm dev                    # web :3000 (proxies /api) + api :4000
 ```
 
-Open http://localhost:3000 and sign in with **demo@contentos.local / ombrafiore-demo**.
+Open http://localhost:3000 and sign in with **demo@contentos.local / ombrafiore-demo**, or create an account to run the onboarding wizard.
+
+No Ollama yet? Set `AI_DRIVER=mock` in `.env` for instant, deterministic AI drafts. With Ollama: `ollama pull mistral:7b-instruct` (or `docker compose --profile ai up -d`) and keep `AI_DRIVER=ollama`.
 
 Full stack in Docker (same files deploy to a VPS):
 
@@ -147,6 +149,7 @@ Set `SEED_ON_START=true` for the first boot to load the demo workspace.
 ```
 apps/web          Next.js 14 (App Router) – UI, Tailwind tokens from design.html
 apps/api          Express 5 REST API – BetterAuth at /api/auth/*, uploads, health, flags
+packages/ai       Ollama client, JSON-mode + zod validation + retry, prompts, claim guardrail, mock driver
 packages/config   zod-validated env + feature flags (publisher, analytics, imageGen, billing)
 packages/db       Prisma schema (PRD §4), migrations, Ombra Fiore seed
 packages/storage  Storage adapter: local (signed URLs) | minio | r2, presigned PUT/GET
@@ -162,6 +165,21 @@ infra/            Postgres init (pgvector)
 | `pnpm build`                    | Production builds (Next standalone, bundled API) |
 | `pnpm db:migrate` / `db:deploy` | Create/apply migrations (dev / prod)             |
 | `pnpm db:seed` / `db:reset`     | Seed demo data / drop, re-migrate and re-seed    |
+
+### API (Phase 1)
+
+All routes need a session (BetterAuth cookie) and only see the caller's own brands.
+
+| Route | Purpose |
+|---|---|
+| `GET/POST /api/brands` | List / create brands |
+| `GET/PATCH/DELETE /api/brands/:id` | Brand profile (+ current DNA on GET) |
+| `POST /api/brands/:id/dna/generate` | AI draft → `{aiJobId, resultJson, model, promptVersion, evalMs, guardrailWarnings}` (not saved) |
+| `GET/POST /api/brands/:id/dna` | Current DNA / save edits as a **new version** |
+| `GET /api/brands/:id/dna/versions[/:v]` | Version history / one version |
+| `POST /api/brands/:id/dna/versions/:v/restore` | Copy an old version forward as the newest |
+
+Every generation is logged in `ai_jobs` (model, prompt version, attempts, time, result or error).
 
 ### Feature flags
 

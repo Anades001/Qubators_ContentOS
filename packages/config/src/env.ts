@@ -34,6 +34,8 @@ export const serverEnvSchema = z
     R2_ACCOUNT_ID: z.string().optional(),
 
     // AI
+    // "mock" returns deterministic drafts — for tests, CI and machines without Ollama.
+    AI_DRIVER: z.enum(["ollama", "mock"]).default("ollama"),
     OLLAMA_HOST: z.string().url().default("http://localhost:11434"),
     AI_MODEL: z.string().default("mistral:7b-instruct"),
     AI_EMBED_MODEL: z.string().default("nomic-embed-text"),

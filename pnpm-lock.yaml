@@ -14,6 +14,9 @@ importers:
       '@types/node':
         specifier: 22.20.7
         version: 22.20.7
+      dotenv:
+        specifier: 16.6.1
+        version: 16.6.1
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)
@@ -41,6 +44,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1178.0
         version: 3.1178.0
+      '@contentos/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@contentos/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -62,6 +68,9 @@ importers:
       express:
         specifier: 5.1.0
         version: 5.1.0
+      ollama:
+        specifier: 0.5.18
+        version: 0.5.18
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -112,6 +121,15 @@ importers:
       tailwindcss:
         specifier: 3.4.19
         version: 3.4.19(tsx@4.23.15)
+
+  packages/ai:
+    dependencies:
+      ollama:
+        specifier: 0.5.18
+        version: 0.5.18
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
 
   packages/config:
     dependencies:
@@ -1920,6 +1938,9 @@ packages:
   ohash@2.0.12:
     resolution: {integrity: sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==}
 
+  ollama@0.5.18:
+    resolution: {integrity: sha512-lTFqTf9bo7Cd3hpF6CviBe/DEhewjoZYd9N/uCe7O20qYTvGqrNOFOBDj3lbZgFWHUgDv5EeyusYxsZSLS8nvg==}
+
   on-finished@2.4.2:
     resolution: {integrity: sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ==}
     engines: {node: '>= 0.8'}
@@ -2482,6 +2503,9 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  whatwg-fetch@3.6.20:
+    resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
 
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
@@ -4314,6 +4338,10 @@ snapshots:
 
   ohash@2.0.12: {}
 
+  ollama@0.5.18:
+    dependencies:
+      whatwg-fetch: 3.6.20
+
   on-finished@2.4.2:
     dependencies:
       ee-first: 1.1.1
@@ -4922,6 +4950,8 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  whatwg-fetch@3.6.20: {}
 
   which@2.0.2:
     dependencies:

@@ -21,6 +21,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://contentos:contentos@localhost:5432/contentos
       BETTER_AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789
+      AI_DRIVER: mock
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -32,7 +33,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
       - name: Migrations apply cleanly and seed is repeatable
         run: pnpm db:deploy && pnpm db:seed && pnpm db:seed
+      # Unit tests + API integration tests against the Postgres service above
+      - run: pnpm test
       - run: pnpm build

@@ -2,12 +2,10 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { z } from "zod";
 import { FeatureDisabledError, assertFeature, type FeatureFlags } from "@contentos/config";
 import { buildKey, verifyLocalSignature, type StorageAdapter } from "@contentos/storage";
+import { HttpError, route, type SessionUser } from "./http";
+import { brandsRouter, type BrandsDeps } from "./routes/brands";
 
-export interface SessionUser {
-  id: string;
-  email: string;
-  name: string;
-}
+export type { SessionUser } from "./http";
 
 /** Everything the HTTP layer needs, injected so tests can run without Postgres or BetterAuth. */
 export interface AppDeps {
@@ -22,22 +20,10 @@ export interface AppDeps {
   /** Returns true if the user owns the brand. */
   userOwnsBrand: (userId: string, brandId: string) => Promise<boolean>;
   pingDb: () => Promise<void>;
+  /** Brand + Brand DNA module (Phase 1). Omitted in tests that don't need a database. */
+  brands?: BrandsDeps;
   version?: string;
 }
-
-class HttpError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<unknown>;
-const route = (fn: AsyncHandler) => (req: Request, res: Response, next: NextFunction) => {
-  fn(req, res, next).catch(next);
-};
 
 const presignBody = z.object({
   brandId: z.string().min(1),
@@ -175,11 +161,13 @@ export function createApp(deps: AppDeps) {
   app.all("/api/images/*splat", gated("imageGen", "Image generation"));
   app.all("/api/billing/*splat", gated("billing", "Billing"));
 
+  if (deps.brands) app.use("/api/brands", brandsRouter(deps.brands, requireUser));
+
   app.use("/api", (_req, _res, next) => next(new HttpError(404, "Not found")));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
-      res.status(err.status).json({ error: err.message });
+      res.status(err.status).json({ error: err.message, ...(err.details ? { details: err.details } : {}) });
       return;
     }
     if (err instanceof FeatureDisabledError) {
