@@ -80,6 +80,7 @@ Example: "launching new handbag" → 10-day campaign (teaser, BTS, detail, story
 ## Differentiation
 
 Not "AI captions" or "image gen" alone, but:
+
 1. Brand Memory
 2. Connected Workflow
 3. Content Intelligence from your own history
@@ -108,7 +109,60 @@ Not "AI captions" or "image gen" alone, but:
 ## Docs
 
 - `Documents/ContentOS.md` – full Product Requirements Document (43 sections)
+- `PRD.md` – implementation plan (stack, phases)
+- `design.html` – visual contract (colors, type, buttons, inputs)
 
 ## Status
 
-Pre-MVP concept. Next: validate onboarding + Brand DNA → idea → brief → studio → calendar loop, then add scheduling, intelligence, collaboration.
+**Phase 0 (scaffold) complete.** Next: Phase 1 – Auth + Brand DNA wizard (`PRD.md` §5).
+
+## Getting started
+
+Requirements: Node 20+, pnpm 10 (`corepack enable`), and either Docker or a local PostgreSQL 16.
+
+```bash
+pnpm install
+cp .env.example .env        # then set BETTER_AUTH_SECRET (openssl rand -hex 32)
+docker compose up -d db     # or point DATABASE_URL at your own Postgres 16
+pnpm db:migrate             # apply migrations
+pnpm db:seed                # Ombra Fiore demo workspace
+pnpm dev                    # web :3000 (proxies /api) + api :4000
+```
+
+Open http://localhost:3000 and sign in with **demo@contentos.local / ombrafiore-demo**.
+
+Full stack in Docker (same files deploy to a VPS):
+
+```bash
+docker compose up -d --build                  # db + migrate + api + web
+docker compose --profile dev up -d            # + mailhog (:8025) + minio (:9001)
+docker compose --profile ai up -d             # + ollama (pulls mistral + nomic-embed-text)
+DOMAIN=contentos.example.com docker compose --profile proxy up -d   # + Caddy, auto-HTTPS
+```
+
+Set `SEED_ON_START=true` for the first boot to load the demo workspace.
+
+### Repository layout
+
+```
+apps/web          Next.js 14 (App Router) – UI, Tailwind tokens from design.html
+apps/api          Express 5 REST API – BetterAuth at /api/auth/*, uploads, health, flags
+packages/config   zod-validated env + feature flags (publisher, analytics, imageGen, billing)
+packages/db       Prisma schema (PRD §4), migrations, Ombra Fiore seed
+packages/storage  Storage adapter: local (signed URLs) | minio | r2, presigned PUT/GET
+infra/            Postgres init (pgvector)
+```
+
+### Scripts
+
+| Command                         | What it does                                     |
+| ------------------------------- | ------------------------------------------------ |
+| `pnpm dev`                      | Run web + api with hot reload                    |
+| `pnpm check`                    | Lint + typecheck + tests                         |
+| `pnpm build`                    | Production builds (Next standalone, bundled API) |
+| `pnpm db:migrate` / `db:deploy` | Create/apply migrations (dev / prod)             |
+| `pnpm db:seed` / `db:reset`     | Seed demo data / drop, re-migrate and re-seed    |
+
+### Feature flags
+
+Modules outside the MVP core loop are routed but gated: `FEATURE_PUBLISHER`, `FEATURE_ANALYTICS`, `FEATURE_IMAGE_GEN`, `FEATURE_BILLING`. Disabled → `404`; enabled but not yet built → `501`. Current values: `GET /api/flags`.

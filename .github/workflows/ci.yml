@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: contentos
+          POSTGRES_PASSWORD: contentos
+          POSTGRES_DB: contentos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U contentos" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://contentos:contentos@localhost:5432/contentos
+      BETTER_AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Migrations apply cleanly and seed is repeatable
+        run: pnpm db:deploy && pnpm db:seed && pnpm db:seed
+      - run: pnpm build

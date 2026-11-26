@@ -1,0 +1,518 @@
+// ContentOS data model — PRD.md §4.
+// Table names are snake_case; Prisma model names are PascalCase.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+/// Pipeline status shown in the calendar and Kanban (design.html "Pipeline statuses").
+enum ContentStatus {
+  IDEA
+  DRAFT
+  IN_PROGRESS
+  REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  PINTEREST
+  FACEBOOK
+  YOUTUBE
+  X
+}
+
+enum ContentType {
+  CAROUSEL
+  CAPTION
+  POST
+  REEL
+  STORY
+  VIDEO_SCRIPT
+  PIN
+  THREAD
+  EMAIL
+  IMAGE
+}
+
+enum InboxCategory {
+  UNSORTED
+  IDEA
+  TREND
+  TASK
+  FAQ
+  CAMPAIGN
+}
+
+enum InboxStatus {
+  NEW
+  TRIAGED
+  ARCHIVED
+}
+
+enum IdeaStatus {
+  NEW
+  SELECTED
+  BRIEFED
+  DISCARDED
+}
+
+enum AssetKind {
+  LOGO
+  PRODUCT_SHOT
+  FONT
+  GUIDELINE
+  TESTIMONIAL
+  FAQ
+  GENERATED_IMAGE
+  OTHER
+}
+
+enum CampaignStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum CalendarSource {
+  INTERNAL
+  GCAL
+}
+
+enum CalendarEventKind {
+  PUBLISH
+  SHOOT
+  DESIGN
+  REVIEW
+  DEADLINE
+  OTHER
+}
+
+enum Plan {
+  FREE
+  CREATOR_PRO
+  BUSINESS
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+}
+
+enum AiJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+  LOGGED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth — BetterAuth core schema (user, session, account, verification)
+// Field names must match what the BetterAuth Prisma adapter expects.
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions        Session[]
+  accounts        Account[]
+  brands          Brand[]
+  gcalConnection  GcalConnection?
+  subscription    Subscription?
+  billingEvents   BillingEvent[]
+  emailLogs       EmailLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Brand + Brand DNA (Content Brain)
+// ─────────────────────────────────────────────────────────────
+
+model Brand {
+  id          String     @id @default(cuid())
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  industry    String?
+  products    String[]
+  audience    String?
+  platforms   Platform[]
+  personality String?
+  tone        String?
+  goals       String[]
+  visualStyle String?
+  /// e.g. { "primary": "#E8B4B8", "accent": "#C9A96A" }
+  colors      Json?
+  logoUrl     String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  dna            BrandDna[]
+  assets         Asset[]
+  inboxItems     InboxItem[]
+  ideas          Idea[]
+  briefs         Brief[]
+  contentItems   ContentItem[]
+  campaigns      Campaign[]
+  calendarEvents CalendarEvent[]
+  aiJobs         AiJob[]
+
+  @@unique([ownerId, slug])
+  @@map("brands")
+}
+
+/// Versioned: each regenerate/edit creates a new row; highest `version` is current.
+model BrandDna {
+  id            String   @id @default(cuid())
+  brandId       String
+  brand         Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  version       Int
+  voice         String[]
+  pillars       String[]
+  ctas          String[]
+  usePhrases    String[]
+  avoidPhrases  String[]
+  guidelines    String?
+  /// AI job that produced this version, if any.
+  sourceAiJobId String?
+  createdAt     DateTime @default(now())
+
+  @@unique([brandId, version])
+  @@map("brand_dna")
+}
+
+model Asset {
+  id          String    @id @default(cuid())
+  brandId     String
+  brand       Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  kind        AssetKind
+  name        String
+  /// Storage key (e.g. originals/<brand>/<uuid>-file.png); resolve to a URL via the storage adapter.
+  storageKey  String?
+  storageUrl  String?
+  mimeType    String?
+  sizeBytes   Int?
+  /// Text body for text assets (FAQs, testimonials) — used by the accuracy guardrail.
+  text        String?
+  tags        String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([brandId, kind])
+  @@map("assets")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Capture → Idea → Brief → Content
+// ─────────────────────────────────────────────────────────────
+
+model InboxItem {
+  id        String        @id @default(cuid())
+  brandId   String
+  brand     Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  rawText   String
+  category  InboxCategory @default(UNSORTED)
+  status    InboxStatus   @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([brandId, status])
+  @@map("inbox_items")
+}
+
+model Idea {
+  id          String      @id @default(cuid())
+  brandId     String
+  brand       Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  goal        String?
+  pillar      String?
+  product     String?
+  format      ContentType?
+  platform    Platform?
+  /// "Why this idea?" rationale from the model.
+  rationale   String?
+  status      IdeaStatus  @default(NEW)
+  aiJobId     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  briefs       Brief[]
+  contentItems ContentItem[]
+
+  @@index([brandId, status])
+  @@map("ideas")
+}
+
+model Brief {
+  id         String   @id @default(cuid())
+  brandId    String
+  brand      Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ideaId     String
+  idea       Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  title      String
+  hook       String
+  objective  String?
+  /// [{ slide: 1, purpose, copy, visual }]
+  slidesJson Json
+  cta        String?
+  aiJobId    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  contentItems ContentItem[]
+
+  @@index([ideaId])
+  @@map("briefs")
+}
+
+model ContentItem {
+  id          String        @id @default(cuid())
+  brandId     String
+  brand       Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ideaId      String?
+  idea        Idea?         @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  briefId     String?
+  brief       Brief?        @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  campaignId  String?
+  campaign    Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  /// Repurposed versions point back at their source item.
+  parentId    String?
+  parent      ContentItem?  @relation("Repurpose", fields: [parentId], references: [id], onDelete: SetNull)
+  children    ContentItem[] @relation("Repurpose")
+  title       String
+  type        ContentType
+  platform    Platform[]
+  /// Type-specific body: caption, hashtags, slides, script, etc.
+  payloadJson Json
+  imagePrompt String?
+  imageUrl    String?
+  status      ContentStatus @default(IDEA)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  /// Accuracy guardrail output, e.g. [{ claim: "100% organic", reason: "..." }]
+  guardrailWarnings Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  calendarEvents CalendarEvent[]
+
+  @@index([brandId, status])
+  @@index([brandId, scheduledAt])
+  @@map("content_items")
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  brandId     String
+  brand       Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name        String
+  goal        String?
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      CampaignStatus @default(PLANNING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  ideas        Idea[]
+  contentItems ContentItem[]
+
+  @@index([brandId])
+  @@map("campaigns")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Calendar + Google Calendar
+// ─────────────────────────────────────────────────────────────
+
+model CalendarEvent {
+  id            String            @id @default(cuid())
+  brandId       String
+  brand         Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItemId String?
+  contentItem   ContentItem?      @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  title         String
+  kind          CalendarEventKind @default(PUBLISH)
+  startsAt      DateTime
+  endsAt        DateTime?
+  allDay        Boolean           @default(false)
+  source        CalendarSource    @default(INTERNAL)
+  gcalEventId   String?
+  gcalSyncedAt  DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([source, gcalEventId])
+  @@index([brandId, startsAt])
+  @@map("calendar_events")
+}
+
+model GcalConnection {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarId            String    @default("primary")
+  /// AES-GCM encrypted refresh token (never stored in plaintext).
+  encryptedRefreshToken String
+  syncToken             String?
+  lastSyncedAt          DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("gcal_connections")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Billing (Paystack) + Email
+// ─────────────────────────────────────────────────────────────
+
+model Subscription {
+  id                       String             @id @default(cuid())
+  userId                   String             @unique
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                     Plan               @default(FREE)
+  status                   SubscriptionStatus @default(ACTIVE)
+  paystackCustomerCode     String?
+  paystackSubscriptionCode String?
+  currentPeriodEnd         DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider   String   @default("paystack")
+  /// Provider event id — unique so webhooks are idempotent.
+  externalId String   @unique
+  type       String
+  payload    Json
+  createdAt  DateTime @default(now())
+
+  @@map("billing_events")
+}
+
+model EmailLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  to        String
+  template  String
+  subject   String
+  driver    String
+  status    EmailStatus @default(QUEUED)
+  error     String?
+  createdAt DateTime    @default(now())
+
+  @@map("email_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AI audit trail
+// ─────────────────────────────────────────────────────────────
+
+model AiJob {
+  id            String      @id @default(cuid())
+  brandId       String?
+  brand         Brand?      @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  kind          String
+  model         String
+  promptVersion String
+  status        AiJobStatus @default(PENDING)
+  input         Json
+  resultJson    Json?
+  error         String?
+  attempts      Int         @default(0)
+  evalMs        Int?
+  createdAt     DateTime    @default(now())
+  completedAt   DateTime?
+
+  @@index([brandId, kind])
+  @@map("ai_jobs")
+}
