@@ -1,0 +1,112 @@
+# ContentOS — identical stack for local and VPS (PRD.md §3, §6).
+#   docker compose up -d                       core stack (db, migrate, api, web)
+#   docker compose --profile dev up -d         + mailhog + minio
+#   docker compose --profile ai up -d          + ollama
+#   docker compose --profile proxy up -d       + caddy (HTTPS on $DOMAIN)
+
+x-app-env: &app-env
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-contentos}:${POSTGRES_PASSWORD:-contentos}@db:5432/${POSTGRES_DB:-contentos}
+    API_INTERNAL_URL: http://api:4000
+    OLLAMA_HOST: http://ollama:11434
+    STORAGE_LOCAL_DIR: /data/storage
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-contentos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-contentos}
+      POSTGRES_DB: ${POSTGRES_DB:-contentos}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrate }
+    <<: *app-env
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: runtime }
+    <<: *app-env
+    restart: unless-stopped
+    ports: ["127.0.0.1:4000:4000"]
+    volumes: [storage:/data/storage]
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    <<: *app-env
+    restart: unless-stopped
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: { api: { condition: service_healthy } }
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: [ai]
+    restart: unless-stopped
+    ports: ["127.0.0.1:11434:11434"]
+    volumes: [ollama:/root/.ollama]
+    # Pull models on boot (idempotent).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "ollama serve & sleep 3 && ollama pull ${AI_MODEL:-mistral:7b-instruct} && ollama pull ${AI_EMBED_MODEL:-nomic-embed-text}; wait"
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    profiles: [dev]
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    profiles: [dev]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: [minio:/data]
+
+  caddy:
+    image: caddy:2
+    profiles: [proxy]
+    restart: unless-stopped
+    environment: { DOMAIN: "${DOMAIN:-localhost}" }
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+
+  # sd-service (SDXL-Turbo) arrives in Phase 3 behind FEATURE_IMAGE_GEN.
+
+volumes:
+  pgdata:
+  storage:
+  ollama:
+  minio:
+  caddy_data:
+  caddy_config:
